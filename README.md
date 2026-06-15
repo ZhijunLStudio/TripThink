@@ -6,6 +6,10 @@
   <img src="https://img.shields.io/badge/providers-OpenRouter%20|%20Anthropic%20|%20OpenAI-orange" alt="Providers">
 </p>
 
+<p align="center">
+  <img src="assets/cover.png" alt="TripThink" width="800">
+</p>
+
 # TripThink
 
 **Three LLMs. Three methodologies. One toolkit.**
