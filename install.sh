@@ -4,6 +4,7 @@ set -e
 # ================================================================
 # TripThink v2 — Multi-Platform One-Click Install
 # Installs shared runtime + 3 skills to your chosen AI platforms.
+# Compatible with bash 3.2+ (macOS default) and zsh.
 # ================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -41,38 +42,85 @@ if ! python3 -c "import httpx" 2>/dev/null; then
     esac
 fi
 
-# ── Platform detection ──────────────────────────────────────────
+# ── Platform detection (bash 3.2 compatible — no associative arrays) ──
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Detecting AI platforms..."
 echo ""
 
-declare -A PLATFORM_DIRS
-declare -A PLATFORM_NAMES
+PLATFORM_KEYS=""
+PLATFORM_DIRS=""
+PLATFORM_NAMES=""
 
-# Map of platform name → skills directory
+add_platform() {
+    local key="$1" dir="$2" name="$3"
+    PLATFORM_KEYS="$PLATFORM_KEYS|$key"
+    PLATFORM_DIRS="$PLATFORM_DIRS|$dir"
+    PLATFORM_NAMES="$PLATFORM_NAMES|$name"
+}
+
+get_dir() {
+    local target="$1"
+    local old_ifs="$IFS"
+    IFS='|'
+    local keys=($PLATFORM_KEYS)
+    local dirs=($PLATFORM_DIRS)
+    IFS="$old_ifs"
+    local i=0
+    for k in "${keys[@]}"; do
+        if [ "$k" = "$target" ]; then
+            echo "${dirs[$i]}"
+            return
+        fi
+        i=$((i + 1))
+    done
+}
+
+get_name() {
+    local target="$1"
+    local old_ifs="$IFS"
+    IFS='|'
+    local keys=($PLATFORM_KEYS)
+    local names=($PLATFORM_NAMES)
+    IFS="$old_ifs"
+    local i=0
+    for k in "${keys[@]}"; do
+        if [ "$k" = "$target" ]; then
+            echo "${names[$i]}"
+            return
+        fi
+        i=$((i + 1))
+    done
+}
+
 detect_platforms() {
-    [ -d "$HOME/.claude" ]          && PLATFORM_DIRS["claude-code"]="$HOME/.claude/skills"         && PLATFORM_NAMES["claude-code"]="Claude Code"
-    [ -d "$HOME/.agents" ]          && PLATFORM_DIRS["codex"]="$HOME/.agents/skills"                && PLATFORM_NAMES["codex"]="Codex CLI"
-    [ -d "$HOME/.config/opencode" ] && PLATFORM_DIRS["opencode"]="$HOME/.config/opencode/skills"    && PLATFORM_NAMES["opencode"]="OpenCode"
-    [ -d "$HOME/.gemini" ]          && PLATFORM_DIRS["gemini"]="$HOME/.gemini/skills"               && PLATFORM_NAMES["gemini"]="Gemini CLI"
-    [ -d "$HOME/.copilot" ]         && PLATFORM_DIRS["copilot"]="$HOME/.copilot/skills"             && PLATFORM_NAMES["copilot"]="GitHub Copilot"
-    [ -d "$HOME/.kiro" ]            && PLATFORM_DIRS["kiro"]="$HOME/.kiro/skills"                   && PLATFORM_NAMES["kiro"]="Kiro"
-    [ -d "$HOME/.config/goose" ]    && PLATFORM_DIRS["goose"]="$HOME/.config/goose/skills"          && PLATFORM_NAMES["goose"]="Goose"
-    [ -d "$HOME/.roo" ]             && PLATFORM_DIRS["roo"]="$HOME/.roo/skills"                     && PLATFORM_NAMES["roo"]="Roo Code"
-    [ -d "$HOME/.cline" ]           && PLATFORM_DIRS["cline"]="$HOME/.cline/skills"                 && PLATFORM_NAMES["cline"]="Cline"
-    [ -d "$HOME/.kilocode" ]        && PLATFORM_DIRS["kilocode"]="$HOME/.kilocode/skills"           && PLATFORM_NAMES["kilocode"]="Kilo Code"
-    [ -d "$HOME/.factory" ]         && PLATFORM_DIRS["factory"]="$HOME/.factory/skills"             && PLATFORM_NAMES["factory"]="Factory Droid"
-    # Project-local: only if running inside a project with .cursor or .windsurf
-    [ -d "$PWD/.cursor" ]           && PLATFORM_DIRS["cursor"]="$PWD/.cursor/skills"                && PLATFORM_NAMES["cursor"]="Cursor (project-local)"
-    [ -d "$PWD/.windsurf" ]         && PLATFORM_DIRS["windsurf"]="$PWD/.windsurf/rules"             && PLATFORM_NAMES["windsurf"]="Windsurf (project-local)"
-    [ -d "$PWD/.trae" ]             && PLATFORM_DIRS["trae"]="$PWD/.trae/rules"                     && PLATFORM_NAMES["trae"]="Trae (project-local)"
+    [ -d "$HOME/.claude" ]          && add_platform "claude-code" "$HOME/.claude/skills"         "Claude Code"
+    [ -d "$HOME/.agents" ]          && add_platform "codex"      "$HOME/.agents/skills"           "Codex CLI"
+    [ -d "$HOME/.config/opencode" ] && add_platform "opencode"   "$HOME/.config/opencode/skills"  "OpenCode"
+    [ -d "$HOME/.gemini" ]          && add_platform "gemini"     "$HOME/.gemini/skills"           "Gemini CLI"
+    [ -d "$HOME/.copilot" ]         && add_platform "copilot"    "$HOME/.copilot/skills"          "GitHub Copilot"
+    [ -d "$HOME/.kiro" ]            && add_platform "kiro"       "$HOME/.kiro/skills"             "Kiro"
+    [ -d "$HOME/.config/goose" ]    && add_platform "goose"      "$HOME/.config/goose/skills"     "Goose"
+    [ -d "$HOME/.roo" ]             && add_platform "roo"        "$HOME/.roo/skills"              "Roo Code"
+    [ -d "$HOME/.cline" ]           && add_platform "cline"      "$HOME/.cline/skills"            "Cline"
+    [ -d "$HOME/.kilocode" ]        && add_platform "kilocode"   "$HOME/.kilocode/skills"         "Kilo Code"
+    [ -d "$HOME/.factory" ]         && add_platform "factory"    "$HOME/.factory/skills"          "Factory Droid"
+    [ -d "$PWD/.cursor" ]           && add_platform "cursor"     "$PWD/.cursor/skills"            "Cursor (project-local)"
+    [ -d "$PWD/.windsurf" ]         && add_platform "windsurf"   "$PWD/.windsurf/rules"           "Windsurf (project-local)"
+    [ -d "$PWD/.trae" ]             && add_platform "trae"       "$PWD/.trae/rules"               "Trae (project-local)"
+    return 0  # always succeed — last [ -d ... ] may return 1 with set -e
 }
 
 detect_platforms
 
+# Strip leading | from the strings
+PLATFORM_KEYS="${PLATFORM_KEYS#|}"
+PLATFORM_DIRS="${PLATFORM_DIRS#|}"
+PLATFORM_NAMES="${PLATFORM_NAMES#|}"
+
 FOUND=0
-for key in "${!PLATFORM_DIRS[@]}"; do
-    echo "  ✅ ${PLATFORM_NAMES[$key]} → ${PLATFORM_DIRS[$key]}"
+PLATFORM_LIST=(); IFS='|' read -ra PLATFORM_LIST <<< "$PLATFORM_KEYS"
+for key in "${PLATFORM_LIST[@]}"; do
+    echo "  ✅ $(get_name "$key") → $(get_dir "$key")"
     FOUND=$((FOUND + 1))
 done
 
@@ -91,12 +139,9 @@ echo ""
 # Always include universal
 echo "  0) Universal (~/.tripthink/) — works everywhere"
 COUNT=1
-declare -A MENU_MAP
-MENU_MAP[0]="universal"
 
-for key in "${!PLATFORM_DIRS[@]}"; do
-    echo "  $COUNT) ${PLATFORM_NAMES[$key]}"
-    MENU_MAP[$COUNT]="$key"
+for key in "${PLATFORM_LIST[@]}"; do
+    echo "  $COUNT) $(get_name "$key")"
     COUNT=$((COUNT + 1))
 done
 
@@ -104,54 +149,64 @@ echo ""
 read -p "Choice [0]: " CHOICES
 CHOICES=${CHOICES:-0}
 
+# Resolve choices
+SELECTED_KEYS=""
 if [ "$CHOICES" = "a" ] || [ "$CHOICES" = "A" ]; then
-    SELECTED_KEYS=("universal")
-    for key in "${!PLATFORM_DIRS[@]}"; do
-        SELECTED_KEYS+=("$key")
-    done
+    SELECTED_KEYS="universal $PLATFORM_KEYS"
 else
-    SELECTED_KEYS=()
     for num in $CHOICES; do
-        if [ -n "${MENU_MAP[$num]}" ]; then
-            SELECTED_KEYS+=("${MENU_MAP[$num]}")
+        if [ "$num" = "0" ]; then
+            SELECTED_KEYS="$SELECTED_KEYS universal"
+        else
+            local_idx=1
+            for key in "${PLATFORM_LIST[@]}"; do
+                if [ "$num" = "$local_idx" ]; then
+                    SELECTED_KEYS="$SELECTED_KEYS $key"
+                fi
+                local_idx=$((local_idx + 1))
+            done
         fi
     done
-    if [ ${#SELECTED_KEYS[@]} -eq 0 ]; then
-        SELECTED_KEYS=("universal")
+    if [ -z "$SELECTED_KEYS" ]; then
+        SELECTED_KEYS="universal"
     fi
 fi
 
 echo ""
 echo "Installing to:"
-for key in "${SELECTED_KEYS[@]}"; do
+for key in $SELECTED_KEYS; do
     if [ "$key" = "universal" ]; then
         echo "  • Universal (~/.tripthink/)"
     else
-        echo "  • ${PLATFORM_NAMES[$key]}"
+        echo "  • $(get_name "$key")"
     fi
 done
 
 # ── Check for existing install ──────────────────────────────────
-existing=()
-for dir in "$SHARED_DIR"; do
-    [ -d "$dir" ] && existing+=("$dir")
-done
-for key in "${SELECTED_KEYS[@]}"; do
+existing=""
+[ -d "$SHARED_DIR" ] && existing="$existing $SHARED_DIR"
+
+for key in $SELECTED_KEYS; do
     if [ "$key" = "universal" ]; then continue; fi
     for sd in "${SKILL_DIRS[@]}"; do
-        dir="${PLATFORM_DIRS[$key]}/$sd"
-        [ -d "$dir" ] && existing+=("$dir")
+        dir="$(get_dir "$key")/$sd"
+        [ -d "$dir" ] && existing="$existing $dir"
     done
 done
 
-if [ ${#existing[@]} -gt 0 ]; then
+# Trim leading space
+existing=$(echo "$existing" | xargs)
+
+if [ -n "$existing" ]; then
     echo ""
     echo "⚠️  Existing installs:"
-    printf '  %s\n' "${existing[@]}"
+    for d in $existing; do
+        echo "  $d"
+    done
     read -p "Overwrite? [y/N] " yn
     case $yn in
         [Yy]* )
-            for dir in "${existing[@]}"; do rm -rf "$dir"; done
+            for d in $existing; do rm -rf "$d"; done
             ;;
         * ) echo "Aborted."; exit 0 ;;
     esac
@@ -165,14 +220,12 @@ echo ""
 
 mkdir -p "$SHARED_DIR/scripts"
 
-# Copy scripts
 cp "$SCRIPT_DIR/scripts/tripthink.py" "$SHARED_DIR/scripts/tripthink.py"
 cp "$SCRIPT_DIR/scripts/query.py" "$SHARED_DIR/scripts/query.py"
 chmod +x "$SHARED_DIR/scripts/tripthink.py" "$SHARED_DIR/scripts/query.py"
 echo "  ✅ scripts/tripthink.py"
 echo "  ✅ scripts/query.py"
 
-# Copy config template (don't overwrite existing user config)
 if [ ! -f "$SHARED_DIR/config.json" ]; then
     cp "$SCRIPT_DIR/config.json" "$SHARED_DIR/config.json"
     echo "  ✅ config.json (template)"
@@ -181,15 +234,15 @@ else
 fi
 
 # ── Install skills to each target platform ──────────────────────
-for key in "${SELECTED_KEYS[@]}"; do
+for key in $SELECTED_KEYS; do
     if [ "$key" = "universal" ]; then
         TARGET="$SHARED_DIR"
         echo ""
-        echo "  📁 Universal install → $SHARED_DIR"
+        echo "  📁 Universal → $SHARED_DIR"
     else
-        TARGET="${PLATFORM_DIRS[$key]}"
+        TARGET="$(get_dir "$key")"
         echo ""
-        echo "  📁 ${PLATFORM_NAMES[$key]} → $TARGET"
+        echo "  📁 $(get_name "$key") → $TARGET"
     fi
 
     mkdir -p "$TARGET"
@@ -209,11 +262,10 @@ for key in "${SELECTED_KEYS[@]}"; do
     done
 done
 
-# ── Config: Add universal path note to SKILL.md files ───────────
-# The SKILL.md files reference $TRIPTHINK_HOME — set up the env var hint
+# ── Shell env config ────────────────────────────────────────────
 SHELL_RC=""
-if [ -f "$HOME/.zshrc" ]; then SHELL_RC="$HOME/.zshrc"; fi
-if [ -f "$HOME/.bashrc" ]; then SHELL_RC="$HOME/.bashrc"; fi
+[ -f "$HOME/.zshrc" ] && SHELL_RC="$HOME/.zshrc"
+[ -f "$HOME/.bashrc" ] && SHELL_RC="$HOME/.bashrc"
 
 if [ -n "$SHELL_RC" ] && ! grep -q "TRIPTHINK_HOME" "$SHELL_RC" 2>/dev/null; then
     echo "" >> "$SHELL_RC"
@@ -248,7 +300,7 @@ generate_openrouter_config() {
     fi
 
     echo ""
-    echo "Choose 3 models from OpenRouter. Use the format: provider/model-name"
+    echo "Choose 3 models from OpenRouter. Format: provider/model-name"
     echo "Examples: anthropic/claude-opus-4-8, google/gemini-2.5-pro, openai/gpt-5"
     echo "Browse: https://openrouter.ai/models"
     echo ""
@@ -295,10 +347,7 @@ generate_openrouter_config() {
 }
 EOF
 
-    # Export the env var for this session
     export TRIPTHINK_OPENROUTER_KEY="$OR_KEY"
-
-    # Add to shell rc
     if [ -n "$SHELL_RC" ]; then
         if ! grep -q "TRIPTHINK_OPENROUTER_KEY" "$SHELL_RC" 2>/dev/null; then
             echo "export TRIPTHINK_OPENROUTER_KEY=\"$OR_KEY\"" >> "$SHELL_RC"
@@ -312,12 +361,7 @@ EOF
 
 generate_individual_config() {
     echo ""
-    echo "Configure 3 models. For each, provide:"
-    echo "  - Display name (any label)"
-    echo "  - Provider type: anthropic | openai"
-    echo "  - API endpoint URL"
-    echo "  - Model ID (the model string sent to API)"
-    echo "  - API key"
+    echo "Configure 3 models. For each, provide name, provider, endpoint, model ID, key."
     echo ""
 
     MODELS_JSON=""
@@ -334,21 +378,17 @@ generate_individual_config() {
         echo ""
 
         KEY_NAME="model_$(echo $i | tr '1-3' 'a-c')"
-        # Use api_key_env for consistency, but fall back to inline for simplicity
-        if [ -n "$M_KEY" ]; then
-            MODELS_JSON+=$(cat << INNER
-    "${KEY_NAME}": {
-      "name": "${M_NAME:-Model $i}",
-      "provider": "${M_PROV}",
-      "endpoint": "${M_ENDP}",
-      "api_key": "${M_KEY}",
-      "model": "${M_MODEL}",
-      "max_tokens": ${M_MAX}
-    }$([ $i -lt 3 ] && echo ",")
-INNER
-)
-            MODELS_JSON+=$'\n'
-        fi
+        COMMA=""
+        if [ $i -lt 3 ]; then COMMA=","; fi
+        MODELS_JSON="${MODELS_JSON}    \"${KEY_NAME}\": {
+      \"name\": \"${M_NAME:-Model $i}\",
+      \"provider\": \"${M_PROV}\",
+      \"endpoint\": \"${M_ENDP}\",
+      \"api_key\": \"${M_KEY}\",
+      \"model\": \"${M_MODEL}\",
+      \"max_tokens\": ${M_MAX}
+    }${COMMA}
+"
     done
 
     cat > "$CONFIG_FILE" << EOF
@@ -388,11 +428,11 @@ verify_file "$SHARED_DIR/config.json"
 verify_file "$SHARED_DIR/scripts/tripthink.py"
 verify_file "$SHARED_DIR/scripts/query.py"
 
-for key in "${SELECTED_KEYS[@]}"; do
+for key in $SELECTED_KEYS; do
     if [ "$key" = "universal" ]; then
         TARGET="$SHARED_DIR"
     else
-        TARGET="${PLATFORM_DIRS[$key]}"
+        TARGET="$(get_dir "$key")"
     fi
     for skill in "${SKILL_DIRS[@]}"; do
         verify_file "$TARGET/$skill/SKILL.md"
@@ -411,15 +451,15 @@ echo "  🚀 Quick test:"
 echo "     python3 $SHARED_DIR/scripts/tripthink.py list"
 echo "     python3 $SHARED_DIR/scripts/tripthink.py check"
 echo ""
-echo "  💡 Usage with Claude Code:"
+echo "  💡 Usage (Claude Code):"
 echo "     /tripthink-deep <question>"
 echo "     /tripthink-debate <proposition>"
 echo "     /tripthink-research <research question>"
 echo ""
-echo "  💡 Usage from other tools (shell):"
+echo "  💡 Usage (shell / any tool):"
 echo "     python3 \$TRIPTHINK_HOME/scripts/tripthink.py dispatch --prompt \"Your question\""
 echo ""
 echo "  ⚙️  Config: $CONFIG_FILE"
-echo "  📖 Guide:  https://github.com/ZhijunLStudio/tripthink#readme"
+echo "  📖 Guide:  https://github.com/ZhijunLStudio/TripThink#readme"
 echo ""
 echo "  Restart your AI tool to load the skills."
