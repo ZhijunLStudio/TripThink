@@ -1,0 +1,28 @@
+{
+  "name": "tripthink",
+  "version": "2.0.0",
+  "description": "Triple-model deliberation — deep reasoning, adversarial debate, and evidence-interleaved research. Works across Claude Code, Codex, Cursor, Windsurf, OpenCode, Gemini CLI, and more.",
+  "author": "ZhijunLStudio",
+  "license": "MIT",
+  "skills": [
+    {
+      "name": "tripthink-deep",
+      "description": "Convergent deliberation through blind seeding, cross-pollination, and structured synthesis across 3 LLMs",
+      "triggers": ["/tripthink-deep", "deep deliberation", "深度审议", "triple-think this"]
+    },
+    {
+      "name": "tripthink-debate",
+      "description": "Adversarial stress-test with role-locked dialectic — steelman, critic, and neutral analyst",
+      "triggers": ["/tripthink-debate", "stress test this", "对抗审议", "压力测试"]
+    },
+    {
+      "name": "tripthink-research",
+      "description": "Evidence-interleaved investigation with hypothesis testing and multi-model triangulation",
+      "triggers": ["/tripthink-research", "evidence-grounded analysis", "带证据的分析", "triangulate this"]
+    }
+  ],
+  "requirements": {
+    "python": ">=3.9",
+    "packages": ["httpx"]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "tripthink",
+  "version": "2.0.0",
+  "description": "Triple-model parallel deliberation — deep reasoning, adversarial debate, and evidence-interleaved research across 3 LLMs. Works with Claude Code, Codex, Cursor, Windsurf, OpenCode, Gemini CLI, Copilot, and any shell.",
+  "author": "ZhijunLStudio",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "llm", "deliberation", "debate", "research", "brainstorm", "multi-model", "openrouter", "multi-platform"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZhijunLStudio/tripthink"
+  },
+  "homepage": "https://github.com/ZhijunLStudio/tripthink#readme",
+  "bugs": {
+    "url": "https://github.com/ZhijunLStudio/tripthink/issues"
+  },
+  "files": [
+    "tripthink-deep/SKILL.md",
+    "tripthink-deep/references/",
+    "tripthink-debate/SKILL.md",
+    "tripthink-debate/references/",
+    "tripthink-research/SKILL.md",
+    "tripthink-research/references/",
+    "scripts/",
+    "config.json",
+    "install.sh"
+  ],
+  "scripts": {
+    "install": "bash install.sh"
+  }
+}

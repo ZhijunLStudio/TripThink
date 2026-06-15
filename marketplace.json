@@ -1,0 +1,15 @@
+{
+  "name": "ZhijunLStudio Marketplace",
+  "owner": "ZhijunLStudio",
+  "description": "TripThink — triple-model deliberation skills for any AI coding tool. Plus curated tools for AI-assisted research and development.",
+  "plugins": [
+    {
+      "name": "tripthink",
+      "description": "Triple-model deliberation — deep reasoning, adversarial debate, evidence-interleaved research. Queries 3 LLMs in parallel with structured multi-phase pipelines. Supports OpenRouter, Anthropic-compatible, and OpenAI-compatible APIs. Works with Claude Code, Codex, Cursor, Windsurf, OpenCode, Gemini CLI, Copilot, and any shell.",
+      "source": "/plugin install tripthink@ZhijunLStudio",
+      "homepage": "https://github.com/ZhijunLStudio/tripthink",
+      "version": "2.0.0",
+      "tags": ["deliberation", "debate", "research", "multi-model", "parallel", "openrouter", "multi-platform"]
+    }
+  ]
+}
